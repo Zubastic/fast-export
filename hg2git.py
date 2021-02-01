@@ -131,14 +131,15 @@ def get_git_sha1(name,type='heads'):
   try:
     # use git-rev-parse to support packed refs
     ref="refs/%s/%s" % (type,name.decode('utf8'))
-    l=subprocess.check_output(["git", "rev-parse", "--verify", "--quiet", ref.encode('utf8')])
+    l=subprocess.check_output(["git", "rev-parse", "--verify",
+                               "--quiet", ref.encode('utf8')])
     if l == None or len(l) == 0:
       return None
     return l[0:40]
   except subprocess.CalledProcessError:
     return None
 
-def force_utf8(name,encoding)
+def force_utf8(name,encoding):
   if encoding:
     return name.decode(encoding).encode('utf8')
   return name

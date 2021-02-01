@@ -1,4 +1,4 @@
-hg-fast-export.(sh|py) - mercurial to git converter using git-fast-import
+hg-fast-export.sh - mercurial to git converter using git-fast-import
 =========================================================================
 
 Legal
@@ -31,8 +31,8 @@ System Requirements
 
 This project depends on Python 2.7 or 3.5+, and the Mercurial >= 4.6
 package (>= 5.2, if Python 3.5+). If Python is not installed, install
-it before proceeding. TheMercurial package can be installed with
-`pip install mercurial`.
+it before proceeding. The Mercurial package can be installed with `pip
+install mercurial`.
 
 On windows the bash that comes with "Git for Windows" is known to work
 well.
@@ -76,10 +76,6 @@ and file names. In that case, you can use `--fe <encoding>` command line
 option which overrides the -e option for file names. Likewise the options 
 `--be <encoding>` and `--te <encoding>` override the encoding used for 
 branch names and tags respectively.
-
-Also Mercurial uses different encodings for branches and tags encoding.
-In that case, you can use `--be <encoding>` or `--te <encoding>` command 
-line options which overrides the -e option for default.
 
 As mercurial appears to be much less picky about the syntax of the
 author information than git, an author mapping file can be given to
@@ -173,7 +169,7 @@ defined filter methods in the [dos2unix](./plugins/dos2unix) and
 [branch_name_in_commit](./plugins/branch_name_in_commit) plugins.
 
 ```
-commit_data = {'branch': branch, 'parents': parents, 'author': author, 'desc': desc}
+commit_data = {'branch': branch, 'parents': parents, 'author': author, 'desc': desc, 'revision': revision, 'hg_hash': hg_hash, 'committer': 'committer'}
 
 def commit_message_filter(self,commit_data):
 ```
@@ -204,9 +200,15 @@ Notes/Limitations
 
 hg-fast-export supports multiple branches but only named branches with
 exactly one head each. Otherwise commits to the tip of these heads
-within the branch will get flattened into merge commits. Chris J
-Billington's [hg-export-tool] can help you to handle branches with
-duplicate heads.
+within the branch will get flattened into merge commits. There are a
+few options to deal with this:
+1. Chris J Billington's [hg-export-tool] can help you to handle branches with
+   duplicate heads.
+2. Use the [head2branch plugin](./plugins/head2branch) to create a new named
+   branch from an unnamed head.
+3. You can ignore unnamed heads with the `-ignore-unnamed-heads` option, which
+   is appropriate in situations such as the extra heads being close commits
+   (abandoned, unmerged changes).
 
 hg-fast-export will ignore any files or directories tracked by mercurial
 called `.git`, and will print a warning if it encounters one. Git cannot
@@ -225,8 +227,8 @@ possible to use hg-fast-export on remote repositories
 Design
 ------
 
-hg-fast-export.py was designed in a way that doesn't require a 2-pass
-mechanism or any prior repository analysis: if just feeds what it
+hg-fast-export was designed in a way that doesn't require a 2-pass
+mechanism or any prior repository analysis: it just feeds what it
 finds into git-fast-import. This also implies that it heavily relies
 on strictly linear ordering of changesets from hg, i.e. its
 append-only storage model so that changesets hg-fast-export already
@@ -235,15 +237,33 @@ saw never get modified.
 Submitting Patches
 ------------------
 
-Please use the [issue-tracker](https://github.com/frej/fast-export) at
-github to report bugs and submit patches.
+Please create a pull request at
+[Github](https://github.com/frej/fast-export/pulls) to submit patches.
 
-Please read
-[https://chris.beams.io/posts/git-commit/](https://chris.beams.io/posts/git-commit/)
-on how to write a good commit message before submitting a pull request
-for review. Although the article recommends at most 50 characters for
-the subject, up to 72 characters are frequently accepted for
-fast-export.
+When submitting a patch make sure the commits in your pull request:
+
+* Have good commit messages
+
+  Please read Chris Beams' blog post [How to Write a Git Commit
+  Message](https://chris.beams.io/posts/git-commit/) on how to write a
+  good commit message. Although the article recommends at most 50
+  characters for the subject, up to 72 characters are frequently
+  accepted for fast-export.
+
+* Adhere to good [commit
+hygiene](http://www.ericbmerritt.com/2011/09/21/commit-hygiene-and-git.html)
+
+  When developing a pull request for hg-fast-export, base your work on
+  the current `master` branch and rebase your work if it no longer can
+  be merged into the current `master` without conflicts. Never merge
+  `master` into your development branch, rebase if your work needs
+  updates from `master`.
+
+  When a pull request is modified due to review feedback, please
+  incorporate the changes into the proper commit. A good reference on
+  how to modify history is in the [Pro Git book, Section
+  7.6](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History).
+
 
 Frequent Problems
 =================
@@ -286,5 +306,12 @@ Frequent Problems
   By design fast export does not touch your working directory, so to
   git it looks like you have deleted all files, when in fact they have
   never been checked out. Just do a checkout of the branch you want.
+
+* `Error: repository has at least one unnamed head: hg r<N>`
+
+  By design, hg-fast-export cannot deal with extra heads on a branch.
+  There are a few options depending on whether the extra heads are
+  in-use/open or normally closed. See [Notes/Limitations](#noteslimitations)
+  section for more details.
 
 [hg-export-tool]: https://github.com/chrisjbillington/hg-export-tool
